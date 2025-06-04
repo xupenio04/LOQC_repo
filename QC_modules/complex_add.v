@@ -1,6 +1,6 @@
 module complex_add #(
-    parameter INT_BITS = 1,
-    parameter FRAC_BITS = 15,
+    parameter INT_BITS = 0,
+    parameter FRAC_BITS = 16,
     parameter WIDTH = INT_BITS + FRAC_BITS
 )(
     input wire signed [WIDTH-1:0] a_real, a_imag,
