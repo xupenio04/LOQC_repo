@@ -4,18 +4,18 @@ module quantum_state_memory #(
     parameter WIDTH = 8
 ) (
     input wire clk,
-    input wire reset,        // Reset ativo em nível BAIXO
+    input wire reset,        
     input wire write_en,
     input wire [STATE_SIZE*WIDTH*2-1:0] state_in,
     output reg [STATE_SIZE*WIDTH*2-1:0] state_out
 );
     
-    always @(posedge clk or negedge reset) begin  // negedge reset
-        if (!reset) begin                         // Reset ativo em nível baixo
-            state_out <= 0; // Reset state to zero
+    always @(posedge clk or negedge reset) begin  
+        if (!reset) begin                        
+            state_out <= 0; 
         end
         else if (write_en) begin
-            state_out <= state_in; // Write new state
+            state_out <= state_in; 
         end
     end
 endmodule
