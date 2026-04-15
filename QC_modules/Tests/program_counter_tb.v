@@ -2,15 +2,15 @@
 
 module program_counter_tb;
 
-    // Parameters
+  
     parameter ADDR_WIDTH = 8;
     
-    // Signals
+    
     reg clk;
     reg reset;
     wire [ADDR_WIDTH-1:0] pc;
     
-    // Expected values
+    
     reg [ADDR_WIDTH-1:0] expected_pc;
     
     // Instantiate DUT
@@ -22,10 +22,10 @@ module program_counter_tb;
         .pc(pc)
     );
     
-    // Clock generation
+    
     always #5 clk = ~clk;
     
-    // Test sequence with automatic verification
+    
     initial begin
         $dumpfile("program_counter_tb.vcd");
         $dumpvars(0, program_counter_tb);
@@ -38,42 +38,42 @@ module program_counter_tb;
         $display("Time\tReset\tPC\tExpected\tStatus");
         $display("---------------------------------------------");
         
-        // Test 1: Reset behavior (PC should be 0)
+        
         #10;
         check_result("Reset active");
         
-        // Test 2: Release reset - PC increments on same clock edge!
+        
         reset = 1;
-        #10; // Wait for clock edge - PC increments immediately
-        expected_pc = 1; // Increments on same edge when reset is released
+        #10; 
+        expected_pc = 1; 
         check_result("First clock after reset release");
         
-        // Test 3: Next clock cycle - PC should increment to 2
+       
         #10;
         expected_pc = 2;
         check_result("Second count");
         
-        // Test 4: Another clock cycle - PC should increment to 3
+      
         #10;
         expected_pc = 3;
         check_result("Third count");
         
-        // Test 5: Reset during operation - should reset immediately
+        
         reset = 0;
-        #2; // Check async reset works immediately
+        #2; 
         expected_pc = 0;
         check_result("Reset asserted");
         
-        #8; // Complete the clock cycle
+        #8; 
         check_result("Reset still active");
         
-        // Test 6: Release reset and check behavior - increments immediately
+        
         reset = 1;
-        #10; // Wait for clock edge
-        expected_pc = 1; // Increments immediately when reset released
+        #10; 
+        expected_pc = 1; 
         check_result("After reset release");
         
-        #10; // Next clock cycle
+        #10; 
         expected_pc = 2;
         check_result("Count after reset");
         
@@ -82,7 +82,7 @@ module program_counter_tb;
         $finish;
     end
     
-    // Task to check results
+    
     task check_result;
         input string test_name;
         begin

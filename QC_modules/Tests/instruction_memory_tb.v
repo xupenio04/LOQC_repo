@@ -40,7 +40,7 @@ module instruction_memory_tb;
         $display("Time\tAddress\tInstruction");
         $display("----------------------------");
         
-        // Test reading all initialized addresses
+      
         #10;
         addr = 0;
         #10;
@@ -54,7 +54,7 @@ module instruction_memory_tb;
         #10;
         $display("%0t\t%0d\t%b", $time, addr, instruction);
         
-        // Test uninitialized addresses (should be X)
+        
         addr = 3;
         #10;
         $display("%0t\t%0d\t%b", $time, addr, instruction);
@@ -63,9 +63,9 @@ module instruction_memory_tb;
         #10;
         $display("%0t\t%0d\t%b", $time, addr, instruction);
         
-        // Test address change during clock cycle
+        
         addr = 0;
-        #2; // Change address before clock edge
+        #2; 
         addr = 1;
         #8;
         $display("%0t\t%0d\t%b", $time, addr, instruction);

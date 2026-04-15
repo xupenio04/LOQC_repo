@@ -25,7 +25,7 @@ module quantum_state_memory_tb();
         forever #5 clk = ~clk;
     end
     
-    // Task para formatar estado complexo
+    
     task display_state;
         input [STATE_SIZE*WIDTH*2-1:0] state;
         integer i;
@@ -42,6 +42,10 @@ module quantum_state_memory_tb();
     
     // Testes
     initial begin
+
+        $dumpfile("quantum_state_memory_tb.vcd");
+        $dumpvars(1, quantum_state_memory_tb);
+
         $display("=== TESTBENCH PARA QUANTUM STATE MEMORY ===");
         $display("N_QUBITS: %0d, STATE_SIZE: %0d, WIDTH: %0d", N_QUBITS, STATE_SIZE, WIDTH);
         $display("Tamanho do barramento: %0d bits", STATE_SIZE*WIDTH*2);
@@ -93,22 +97,21 @@ module quantum_state_memory_tb();
         $write("Estado mantido:        ");
         display_state(state_out);
         
-        // Teste 5: Reset durante operação
+       
         $display("\n5. Teste de Reset Durante Operação");
         state_in = 64'hAAAA_BBBB_CCCC_DDDD;
         write_en = 1;
         #5;
-        reset = 0; // Reset durante escrita (nível baixo)
+        reset = 0; 
         #5;
         reset = 1;
         #10;
         $write("Estado após reset: ");
         display_state(state_out);
         
-        // Teste 6: Estado quântico realista
+       
         $display("\n6. Teste com Estado Quântico Realista");
-        // |00> = 0.707 + 0i, |01> = 0 + 0.707i, |10> = 0.707 + 0i, |11> = 0 + 0.707i
-        // 0.707 ≈ 181/256 ≈ 0xB5
+       
         state_in = {8'h00, 8'hB5, 8'hB5, 8'h00, 8'h00, 8'hB5, 8'hB5, 8'h00};
         write_en = 1;
         #10;

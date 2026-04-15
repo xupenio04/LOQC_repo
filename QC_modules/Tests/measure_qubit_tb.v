@@ -13,7 +13,6 @@ module tb_measure_qubit;
     integer count_0 = 0, count_1 = 0;
     integer total_tests = 1000;
     
-    // Debug signals
     wire [7:0] real0 = state_in[7:0];
     wire [7:0] real1 = state_in[23:16];
     
@@ -36,7 +35,7 @@ module tb_measure_qubit;
                 count_0, (count_0*100.0)/total_tests,
                 count_1, (count_1*100.0)/total_tests);
         
-        // Reset counters
+        
         count_0 = 0; count_1 = 0;
         
         $display("\n=== Teste 25/75 ===");
@@ -45,7 +44,7 @@ module tb_measure_qubit;
         $display("prob1 = 192^2 = %0d", 192*192);
         $display("total_prob = %0d", (64*64) + (192*192));
         
-        state_in = 32'h00C00040; // real0=64, real1=192 (25/75)
+     
         repeat(total_tests) begin
             measure_en = 1; #10; measure_en = 0; #40;
         end

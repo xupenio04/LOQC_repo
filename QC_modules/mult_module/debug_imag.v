@@ -1,139 +1,74 @@
-module new_state #(parameter NUM_QUBITS = 1)(
-    input wire [15:0] unitary_matrix [0:2**NUM_QUBITS-1][0:2**NUM_QUBITS-1],
-    input wire [15:0] state_in[0:2**NUM_QUBITS-1],
-    output wire [15:0] state_out[0:2**NUM_QUBITS-1] 
-);
-
-    genvar i, j;
-    
-   
-    wire signed [7:0] mult_real [0:2**NUM_QUBITS-1][0:2**NUM_QUBITS-1];
-    wire signed [7:0] mult_imag [0:2**NUM_QUBITS-1][0:2**NUM_QUBITS-1];
-    
-    generate
-        for (i = 0; i < 2**NUM_QUBITS; i = i + 1) begin : row_loop
-            for (j = 0; j < 2**NUM_QUBITS; j = j + 1) begin : col_loop
-                complex_mult complex_mult_inst (
-                    .a_real(unitary_matrix[i][j][15:8]),
-                    .a_imag(unitary_matrix[i][j][7:0]),
-                    .b_real(state_in[j][15:8]),
-                    .b_imag(state_in[j][7:0]),
-                    .res_real(mult_real[i][j]),
-                    .res_imag(mult_imag[i][j])
-                );
-            end
-        end
-        
-        for (i = 0; i < 2**NUM_QUBITS; i = i + 1) begin : output_loop
-            
-            if (2**NUM_QUBITS == 1) begin
-                assign state_out[i] = {mult_real[i][0], mult_imag[i][0]};
-            end else if (2**NUM_QUBITS == 2) begin
-                wire signed [7:0] row_sum_real, row_sum_imag;
-                assign row_sum_real = mult_real[i][0] + mult_real[i][1];
-                assign row_sum_imag = mult_imag[i][0] + mult_imag[i][1];
-                assign state_out[i] = {row_sum_real[7:0], row_sum_imag[7:0]};
-            end else begin
-                
-                wire signed [7:0] temp_sum_real [0:2**NUM_QUBITS-1];
-                wire signed [7:0] temp_sum_imag [0:2**NUM_QUBITS-1];
-                
-                assign temp_sum_real[0] = mult_real[i][0];
-                assign temp_sum_imag[0] = mult_imag[i][0];
-                
-                for (j = 1; j < 2**NUM_QUBITS; j = j + 1) begin : add_chain
-                    assign temp_sum_real[j] = temp_sum_real[j-1] + mult_real[i][j];
-                    assign temp_sum_imag[j] = temp_sum_imag[j-1] + mult_imag[i][j];
-                end
-                
-                assign state_out[i] = {temp_sum_real[2**NUM_QUBITS-1], 
-                                      temp_sum_imag[2**NUM_QUBITS-1]};
-            end
-        end
-    endgenerate
-
-endmodule
-module complex_add (
-    input signed [7:0] a_real, a_imag,
-    input signed [7:0] b_real, b_imag,
-    output signed [7:0] res_real, res_imag
-);
-
-    wire signed [7:0] sum_real;
-    wire signed [7:0] sum_imag;
-
-    assign sum_real = //(a_real[7] == 1'b1 && b_real[7] == 1'b1) ? ((~a_real +1'b1) + (~b_real + 1'b1))  :
-               //(a_real[7] == 1'b1 && b_real[7] == 1'b0) ? ((~a_real +1'b1) + b_real) :
-               //(a_real[7] == 1'b0 && b_real[7] == 1'b1) ? (a_real + (~b_real +1'b1)) :
-               (a_real + b_real);
-    assign sum_imag = //(a_imag[7] == 1'b1 && b_imag[7] == 1'b1) ? ((~a_imag +1'b1) + (~b_imag +1'b1))  :
-               //(a_imag[7] == 1'b1 && b_imag[7] == 1'b0) ? ((~a_imag +1'b1) + b_imag) :
-               //(a_imag[7] == 1'b0 && b_imag[7] == 1'b1) ? (a_imag + (~b_imag +1'b1)) :
-               (a_imag + b_imag);
-
-    assign res_real = sum_real;
-    assign res_imag = sum_imag;
-
-endmodule
-
-module complex_mult (
+module complex_mult # ( INT_BITS =8, FRAC_BITS=8, SHIFT_BITS=8, MULTIPLY_BITS=1
+ ) (
     input signed [7:0] a_real, a_imag,
     input signed [7:0] b_real, b_imag,
     output signed [7:0] res_real, res_imag
 );
 
     wire signed [15:0] ac;
+    wire signed [15:0] bd;
     wire signed [15:0] ad;
     wire signed [15:0] bc;
-    wire signed [15:0] bd;
 
-    ac_mult ac_mult_inst (
+    ac_mult #(
+        .INT_BITS(INT_BITS),
+        .FRAC_BITS(FRAC_BITS),
+        .SHIFT_BITS(SHIFT_BITS),
+        .MULTIPLY_BITS(MULTIPLY_BITS)
+    ) ac_mult_inst (
         .a_real(a_real),
         .b_real(b_real),
         .ac(ac)
     );
 
-    ad_mult  ad_mult_inst (
-        .a_real(a_real),
-        .b_imag(b_imag),
-        .ad(ad)
-    );
-
-    bc_mult  bc_mult_inst (
-        .a_imag(a_imag),
-        .b_real(b_real),
-        .bc(bc)
-    );
-
-    bd_mult bd_mult_inst (
+    bd_mult #(
+        .INT_BITS(INT_BITS),
+        .FRAC_BITS(FRAC_BITS),
+        .SHIFT_BITS(SHIFT_BITS),
+        .MULTIPLY_BITS(MULTIPLY_BITS)
+    ) bd_mult_inst (
         .a_imag(a_imag),
         .b_imag(b_imag),
         .bd(bd)
     );
 
-    wire [15:0] real_part = ac - bd;
-    wire [15:0] imag_part = ad + bc;
-
-    round  round_real_inst (
-        .in(real_part),
-        .out(res_real)
+    ad_mult #(
+        .INT_BITS(INT_BITS),
+        .FRAC_BITS(FRAC_BITS),
+        .SHIFT_BITS(SHIFT_BITS),
+        .MULTIPLY_BITS(MULTIPLY_BITS)
+    ) ad_mult_inst (
+        .a_real(a_real),
+        .b_imag(b_imag),
+        .ad(ad)
     );
 
-    round round_imag_inst (
-        .in(imag_part),
-        .out(res_imag)
+    bc_mult #(
+        .INT_BITS(INT_BITS),
+        .FRAC_BITS(FRAC_BITS),
+        .SHIFT_BITS(SHIFT_BITS),
+        .MULTIPLY_BITS(MULTIPLY_BITS)
+    ) bc_mult_inst (
+        .a_imag(a_imag),
+        .b_real(b_real),
+        .bc(bc)
     );
+
+    wire [15:0] res_real_full = ac - bd;
+    wire [15:0] res_imag_full = ad + bc;
+    assign res_real = res_real_full >>> SHIFT_BITS;
+    assign res_imag = res_imag_full >>> SHIFT_BITS;
 
 
 endmodule
 
-module ac_mult
+module ac_mult #(
+INT_BITS =8, FRAC_BITS=8, SHIFT_BITS=8, MULTIPLY_BITS=1)
 (input signed [7:0] a_real,
  input signed [7:0] b_real,
  output signed [15:0] ac
  );
 
-    localparam SHIFT_BITS=8, MULTIPLY_BITS=1;
     wire signed [15:0] mult;
 
    assign mult =
@@ -150,19 +85,20 @@ module ac_mult
     (a_real[7] == 1'b1 && b_real[7] == 1'b0) ? ~(({8'b0,(~a_real +1'b1)} * {8'b0,b_real})) + 1'b1 <<< MULTIPLY_BITS :
     (a_real[7] == 1'b0 && b_real[7] == 1'b1) ? ~(({8'b0,a_real} * {8'b0,(~b_real +1'b1)})) + 1'b1 <<< MULTIPLY_BITS :
     (({8'b0,a_real} * {8'b0,b_real})) <<< MULTIPLY_BITS;
-
-
-
+    
     assign ac = mult ;
+
+
 endmodule
 
 
-module ad_mult
+module ad_mult #(
+INT_BITS =8, FRAC_BITS=8, SHIFT_BITS=8, MULTIPLY_BITS=1)
 (input signed [7:0] a_real,
  input signed [7:0] b_imag,
  output signed [15:0] ad
  );
-    localparam SHIFT_BITS=8, MULTIPLY_BITS=1;
+
     wire signed [15:0] mult;
 
    assign mult =
@@ -179,19 +115,21 @@ module ad_mult
     (a_real[7] == 1'b1 && b_imag[7] == 1'b0) ? ~(({8'b0,(~a_real +1'b1)} * {8'b0,b_imag})) + 1'b1 <<< MULTIPLY_BITS :
     (a_real[7] == 1'b0 && b_imag[7] == 1'b1) ? ~(({8'b0,a_real} * {8'b0,(~b_imag +1'b1)})) + 1'b1 <<< MULTIPLY_BITS :
     ((({8'b0,a_real} * {8'b0,b_imag})) <<< MULTIPLY_BITS);
-
+    
     assign ad = mult;
     
 
+
+
 endmodule
 
-module bc_mult 
+module bc_mult #(
+INT_BITS =8, FRAC_BITS=8, SHIFT_BITS=8, MULTIPLY_BITS=1)
 (input signed [7:0] a_imag,
  input signed [7:0] b_real,
  output signed [15:0] bc
  );
 
-    localparam SHIFT_BITS=8, MULTIPLY_BITS=1;
     wire signed [15:0] mult;
 
    assign mult =
@@ -208,20 +146,19 @@ module bc_mult
     (a_imag[7] == 1'b1 && b_real[7] == 1'b0) ? ~(({8'b0,(~a_imag +1'b1)} * {8'b0,b_real})) + 1'b1 <<< MULTIPLY_BITS :
     (a_imag[7] == 1'b0 && b_real[7] == 1'b1) ? ~(({8'b0,a_imag} * {8'b0,(~b_real +1'b1)})) + 1'b1 <<< MULTIPLY_BITS :
     ((({8'b0,a_imag} * {8'b0,b_real})) <<< MULTIPLY_BITS);
-
-    wire signed [7:0] bc_rounded;
-
+    
     assign bc = mult;
+
 endmodule
 
 
-module bd_mult 
+module bd_mult #(
+INT_BITS =8, FRAC_BITS=8, SHIFT_BITS=8, MULTIPLY_BITS=1)
 (input signed [7:0] a_imag,
  input signed [7:0] b_imag,
  output signed [15:0] bd
  );
 
-    localparam SHIFT_BITS=8, MULTIPLY_BITS=1;
     wire signed [15:0] mult;
 
     assign mult =
@@ -238,56 +175,8 @@ module bd_mult
     (a_imag[7] == 1'b1 && b_imag[7] == 1'b0) ? ~(({8'b0,(~a_imag +1'b1)} * {8'b0,b_imag})) + 1'b1 <<< MULTIPLY_BITS :
     (a_imag[7] == 1'b0 && b_imag[7] == 1'b1) ? ~(({8'b0,a_imag} * {8'b0,(~b_imag +1'b1)})) + 1'b1 <<< MULTIPLY_BITS :
     (({8'b0,a_imag} * {8'b0,b_imag})) <<< MULTIPLY_BITS;
-
-    wire signed [7:0] bd_rounded;
-
-    assign bd = mult;
-
-endmodule
-
-
-module floor 
-(
-    input signed [15:0] in,
-    output signed [7:0] out
-);
-    localparam SHIFT_BITS = 8;
-    assign out = in >>> SHIFT_BITS;
-
-
-endmodule
-
-module ceil
-(
-    input signed [15:0] in,
-    output signed [7:0] out
-    );
     
-    localparam SHIFT_BITS = 8;
-    assign out = (in >>> SHIFT_BITS) + ((in & ((1 << SHIFT_BITS) - 1)) != 0 ? 1 : 0);
+    assign bd = mult ;
 
-endmodule
-
-
-module round (
-    input signed [15:0] in,
-    output signed [7:0] out
-);
-
-    localparam SHIFT_BITS = 8;
-    wire signed [7:0] floor_out;
-    wire signed [7:0] ceil_out;
-
-    floor floor_inst (
-        .in(in),
-        .out(floor_out)
-    );
-
-    ceil ceil_inst (
-        .in(in),
-        .out(ceil_out)
-    );
-
-    assign out = (in & ((1 << SHIFT_BITS) - 1)) >= (1 << (SHIFT_BITS - 1)) ? ceil_out : floor_out;
 
 endmodule
