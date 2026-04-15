@@ -1,0 +1,7 @@
+módulos que precisamos para a computação:
+1) Módulo para probabilidade de medir 0 (não entendi se isso é para todos os casos, 
+    mas pelo artigo faz parte do algoritmo)
+2) Módulo da divisão de números complexos (realmente necessário ?)
+3) Módulo de número absoluto (????)
+4) Módulo do collapse
+5) 
